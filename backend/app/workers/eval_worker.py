@@ -11,12 +11,34 @@ def run_exact_eval(actual: str, expected: str) -> float:
 
 def run_similarity_eval(actual: str, expected: str) -> float:
     try:
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.metrics.pairwise import cosine_similarity
-        vectorizer = TfidfVectorizer()
-        tfidf_matrix = vectorizer.fit_transform([actual, expected])
-        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-        return max(0.0, min(1.0, float(similarity)))
+        # Pure Python TF-IDF cosine similarity — no external dependencies
+        import math
+        from collections import Counter
+
+        def tokenize(text):
+            return text.lower().split()
+
+        def tf(tokens):
+            count = Counter(tokens)
+            total = len(tokens)
+            return {word: count[word] / total for word in count}
+
+        def cosine_sim(vec_a, vec_b):
+            all_keys = set(vec_a) | set(vec_b)
+            dot = sum(vec_a.get(k, 0) * vec_b.get(k, 0) for k in all_keys)
+            mag_a = math.sqrt(sum(v ** 2 for v in vec_a.values()))
+            mag_b = math.sqrt(sum(v ** 2 for v in vec_b.values()))
+            if mag_a == 0 or mag_b == 0:
+                return 0.0
+            return dot / (mag_a * mag_b)
+
+        tokens_a = tokenize(actual)
+        tokens_b = tokenize(expected)
+        if not tokens_a or not tokens_b:
+            return 0.0
+
+        sim = cosine_sim(tf(tokens_a), tf(tokens_b))
+        return max(0.0, min(1.0, float(sim)))
     except Exception as e:
         print(f"Similarity eval error: {e}")
         return 0.0
