@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.limiter import limiter
@@ -10,20 +11,33 @@ app = FastAPI(
     version="0.1.0",
 )
 
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+origins = [
+    "http://localhost:3000",
+    "https://flux-app-lilac.vercel.app",
+    "https://flux-ctwk8km65-utkarshvyas70s-projects.vercel.app",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://flux-app-lilac.vercel.app",
-        "https://flux-ctwk8km65-utkarshvyas70s-projects.vercel.app",
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests. Please slow down."},
+        headers={
+            "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
 
 
 def run_migrations():
@@ -32,7 +46,7 @@ def run_migrations():
         from alembic import command
         alembic_cfg = Config("alembic.ini")
         command.upgrade(alembic_cfg, "head")
-        print("✓ Migrations applied successfully")
+        print("✓ Migrations applied")
     except Exception as e:
         print(f"Migration error: {e}")
 
@@ -47,9 +61,9 @@ def run_seed():
         if not existing:
             import subprocess
             subprocess.run(["python", "seed_demo.py"], check=True)
-            print("✓ Demo data seeded successfully")
+            print("✓ Demo data seeded")
         else:
-            print("✓ Demo data already exists")
+            print("✓ Demo data exists")
     except Exception as e:
         print(f"Seed error: {e}")
 
