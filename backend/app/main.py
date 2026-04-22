@@ -5,6 +5,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.limiter import limiter
 
+
 app = FastAPI(
     title="Flux API",
     description="Version control system for LLM prompts",
@@ -83,6 +84,7 @@ from app.api.versions import router2 as versions_router2
 from app.api.evals import router as evals_router
 from app.api.diff import router as diff_router
 from app.api.playground import router as playground_router
+from app.api.advisor import router as advisor_router
 
 app.include_router(health_router)
 app.include_router(auth_router)
@@ -93,7 +95,7 @@ app.include_router(versions_router2)
 app.include_router(evals_router)
 app.include_router(diff_router)
 app.include_router(playground_router)
-
+app.include_router(advisor_router)
 
 @app.get("/")
 def root():
